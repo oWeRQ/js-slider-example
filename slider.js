@@ -1,6 +1,7 @@
 function Slider(options) {
 	this.el = typeof options.el === 'string' ? document.querySelector(options.el) : options.el;;
 	this.slideChange = options.slideChange;
+	this.touchThreshold = options.touchThreshold || 50;
 
 	this.wrapper = this.el.querySelector('.b-slider-wrapper');
 	this.items = this.el.querySelectorAll('.b-slider-item');
@@ -30,6 +31,17 @@ function Slider(options) {
 			e.preventDefault();
 			this.slideToEmit(index);
 		});
+	});
+
+	let touchStartX;
+	this.el.addEventListener('touchstart', e => {
+		touchStartX = e.changedTouches[0].clientX;
+	});
+	this.el.addEventListener('touchend', e => {
+		const deltaX = e.changedTouches[0].clientX - touchStartX;
+		if (Math.abs(deltaX) > this.touchThreshold) {
+			this.slideToEmit(this.position + (deltaX > 0 ? -1 : 1));
+		}
 	});
 
 	this.slideTo(0);
