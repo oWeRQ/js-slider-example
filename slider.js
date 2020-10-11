@@ -40,7 +40,7 @@ function Slider(options) {
 	this.el.addEventListener('touchend', e => {
 		const deltaX = e.changedTouches[0].clientX - touchStartX;
 		if (Math.abs(deltaX) > this.touchThreshold) {
-			this.slideToEmit(this.position + (deltaX > 0 ? -1 : 1));
+			this.slideToEmit(this.position - Math.sign(deltaX));
 		}
 	});
 
