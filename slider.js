@@ -1,6 +1,6 @@
 function Slider(options) {
 	this.el = typeof options.el === 'string' ? document.querySelector(options.el) : options.el;;
-	this.slideChange = options.slideChange || function(){};
+	this.slideChange = options.slideChange;
 
 	this.wrapper = this.el.querySelector('.b-slider-wrapper');
 	this.items = this.el.querySelectorAll('.b-slider-item');
@@ -47,11 +47,13 @@ Slider.prototype.getItem = function(position) {
 	return this.items[this.getIndex(position)];
 }
 
-Slider.prototype.resetOffset = function() {
-	this.wrapper.style.transitionDuration = '0s';
-	this.slideTo(this.getIndex(this.position));
-	setTimeout(() => this.wrapper.style.transition = '', 13);
-} 
+Slider.prototype.getItemPosition = function(position) {
+	const diff = this.getIndex(position) - this.getIndex(this.position);
+	const back = (diff < 0 ? 0 : this.items.length) - diff;
+	const forward = (diff < 0 ? this.items.length : 0) + diff;
+
+	return this.position + (back < forward ? -back : forward);
+}
 
 Slider.prototype.updateWrapperPosition = function(position) {
 	this.wrapper.style.transform = 'translateX(' + (-position / this.visibleCount * 100) + '%)';
@@ -61,36 +63,35 @@ Slider.prototype.updateItemPosition = function(position) {
 	this.getItem(position).style.transform = 'translateX(' + (this.getOffset(position) * 100) + '%)';
 }
 
-Slider.prototype.getItemPosition = function(position) {
-	const thisIndex = this.getIndex(this.position);
-	const nextIndex = this.getIndex(position);
-	const back = (nextIndex < thisIndex ? thisIndex - nextIndex : thisIndex + (this.items.length - nextIndex));
-	const forward = (nextIndex < thisIndex ? (this.items.length - thisIndex) + nextIndex : nextIndex - thisIndex);
-
-	return this.position + (back < forward ? -back : forward);
-}
-
-Slider.prototype.slideTo = function(position) {
-	position = this.getItemPosition(position);
-
+Slider.prototype.setPosition = function(position) {
 	for (var i = position - this.nearCount; i <= position + this.nearCount; i++) {
 		this.updateItemPosition(i);
 	}
 
 	this.updateWrapperPosition(position - this.nearCount);
 
+	this.position = position;
+}
+
+Slider.prototype.resetOffset = function() {
+	this.wrapper.style.transitionDuration = '0s';
+	this.setPosition(this.getIndex(this.position));
+	setTimeout(() => this.wrapper.style.transitionDuration = '', 13);
+}
+
+Slider.prototype.slideTo = function(position) {
 	this.getItem(this.position).classList.remove('m-active');
 	this.getItem(position).classList.add('m-active');
 
-	this.position = position;
+	this.setPosition(this.getItemPosition(position));
+
+	clearTimeout(this.resetOffsetTimeout);
+	this.resetOffsetTimeout = setTimeout(() => this.resetOffset(), this.transitionDuration);
 }
 
 Slider.prototype.slideToEmit = function(position) {
 	this.slideTo(position);
-	this.slideChange(this.position);
-
-	// clearTimeout(this.resetOffsetTimeout);
-	// this.resetOffsetTimeout = setTimeout(() => this.resetOffset(), this.transitionDuration);
+	this.slideChange && this.slideChange(this.position);
 }
 
 var previewSlider = new Slider({
