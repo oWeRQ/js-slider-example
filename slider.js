@@ -35,12 +35,12 @@ function Slider(options) {
 	this.slideTo(0);
 }
 
-Slider.prototype.getIndex = function(position) {
-	return ((position % this.items.length) + this.items.length) % this.items.length;
+Slider.prototype.getOffset = function(position) {
+	return Math.floor(position / this.items.length) * this.items.length;
 }
 
-Slider.prototype.getOffset = function(position) {
-	return position - this.getIndex(position);
+Slider.prototype.getIndex = function(position) {
+	return position - this.getOffset(position);
 }
 
 Slider.prototype.getItem = function(position) {
