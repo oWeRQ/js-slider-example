@@ -1,18 +1,23 @@
 function Slider(options) {
 	this.el = typeof options.el === 'string' ? document.querySelector(options.el) : options.el;
 	this.slideChange = options.slideChange;
-	this.touchThreshold = options.touchThreshold || 50;
+	this.activeClass = options.activeClass || 'm-active';
+	this.touchThreshold = +options.touchThreshold || 50;
+	this.position = +options.position || 0;
 
 	this.init();
 }
 
 Slider.prototype.init = function() {
-	this.position = 0;
-
 	this.initElements();
-	this.slideTo(this.position);
-
 	this.initListeners();
+	this.resetOffset();
+	this.updateActive(this.position, true)
+}
+
+Slider.prototype.destroy = function() {
+	this.destroyListeners();
+	this.updateActive(this.position, false)
 }
 
 Slider.prototype.initElements = function() {
@@ -61,7 +66,7 @@ Slider.prototype.initListeners = function() {
 	});
 }
 
-Slider.prototype.destroy = function() {
+Slider.prototype.destroyListeners = function() {
 	this.arrowLeft.removeEventListener('click', this.arrowLeftHandler);
 	this.arrowRight.removeEventListener('click', this.arrowRightHandler);
 	this.itemsHandlers.forEach((handler, i) => {
@@ -99,6 +104,10 @@ Slider.prototype.updateItemPosition = function(position) {
 	this.getItem(position).style.transform = 'translateX(' + (this.getOffset(position) * 100) + '%)';
 }
 
+Slider.prototype.updateActive = function(position, state) {
+	this.getItem(position).classList.toggle(this.activeClass, state);
+}
+
 Slider.prototype.setPosition = function(position) {
 	for (var i = position - this.nearCount; i <= position + this.nearCount; i++) {
 		this.updateItemPosition(i);
@@ -112,13 +121,13 @@ Slider.prototype.setPosition = function(position) {
 Slider.prototype.resetOffset = function() {
 	this.wrapper.style.transitionDuration = '0s';
 	this.setPosition(this.getIndex(this.position));
-	this.wrapper.clientWidth; // force reflow
+	void(this.wrapper.clientWidth); // force reflow
 	this.wrapper.style.transitionDuration = '';
 }
 
 Slider.prototype.slideTo = function(position) {
-	this.getItem(this.position).classList.remove('m-active');
-	this.getItem(position).classList.add('m-active');
+	this.updateActive(this.position, false);
+	this.updateActive(position, true);
 
 	this.setPosition(this.getItemPosition(position));
 
