@@ -112,7 +112,8 @@ Slider.prototype.setPosition = function(position) {
 Slider.prototype.resetOffset = function() {
 	this.wrapper.style.transitionDuration = '0s';
 	this.setPosition(this.getIndex(this.position));
-	setTimeout(() => this.wrapper.style.transitionDuration = '', 13);
+	this.wrapper.clientWidth; // force reflow
+	this.wrapper.style.transitionDuration = '';
 }
 
 Slider.prototype.slideTo = function(position) {
