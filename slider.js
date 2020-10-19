@@ -1,3 +1,10 @@
+function withoutTransition(el, cb) {
+	el.style.transitionDuration = '0s';
+	cb();
+	void(el.clientWidth); // force reflow
+	el.style.transitionDuration = '';
+}
+
 class Slider {
 	constructor(options) {
 		this.el = typeof options.el === 'string' ? document.querySelector(options.el) : options.el;
@@ -127,10 +134,7 @@ class Slider {
 	}
 
 	resetOffset() {
-		this.wrapper.style.transitionDuration = '0s';
-		this.setPosition(this.getIndex(this.position));
-		void(this.wrapper.clientWidth); // force reflow
-		this.wrapper.style.transitionDuration = '';
+		withoutTransition(this.wrapper, () => this.setPosition(this.getIndex(this.position)));
 	}
 
 	slideTo(position) {
