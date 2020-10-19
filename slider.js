@@ -32,9 +32,7 @@ class Slider {
 		this.next = this.el.querySelector(this.nextClass);
 
 		this.transitionDuration = parseFloat(getComputedStyle(this.wrapper).transitionDuration) * 1000;
-		this.wrapperWidth = this.wrapper.clientWidth;
-		this.itemWidth = this.items[0].clientWidth;
-		this.visibleCount = this.wrapperWidth / this.itemWidth;
+		this.visibleCount = this.wrapper.clientWidth / this.items[0].clientWidth;
 		this.nearCount = Math.floor(this.visibleCount / 2);
 	}
 
