@@ -5,15 +5,24 @@ function withoutTransition(el, cb) {
 	el.style.transitionDuration = '';
 }
 
+function queryElement(el, context) {
+	if (el instanceof HTMLElement)
+		return el;
+
+	if (typeof el === 'string')
+		return (context || document).querySelector(el);
+
+	return null;
+}
+
 class Slider {
 	constructor(options) {
-		this.el = typeof options.el === 'string' ? document.querySelector(options.el) : options.el;
-		this.slideChange = options.slideChange;
+		this.el = queryElement(options.el);
+		this.wrapper = queryElement(options.wrapper || '.b-slider-wrapper', this.el);
+		this.prev = queryElement(options.prev || '.b-slider-arrow_left', this.el);
+		this.next = queryElement(options.next || '.b-slider-arrow_right', this.el);
 		this.activeClass = options.activeClass || 'm-active';
-		this.wrapperClass = options.wrapperClass || '.b-slider-wrapper';
-		this.itemClass = options.itemClass || '.b-slider-item';
-		this.prevClass = options.prevClass || '.b-slider-arrow_left';
-		this.nextClass = options.nextClass || '.b-slider-arrow_right';
+		this.slideChange = options.slideChange;
 		this.touchThreshold = +options.touchThreshold || 50;
 		this.position = +options.position || 0;
 
@@ -21,7 +30,7 @@ class Slider {
 	}
 
 	init() {
-		this.initElements();
+		this.initItems();
 		this.initClick();
 		this.initTouch();
 		this.resetOffset();
@@ -32,11 +41,8 @@ class Slider {
 		this.destroyTouch();
 	}
 
-	initElements() {
-		this.wrapper = this.el.querySelector(this.wrapperClass);
-		this.items = Array.from(this.el.querySelectorAll(this.itemClass));
-		this.prev = this.el.querySelector(this.prevClass);
-		this.next = this.el.querySelector(this.nextClass);
+	initItems() {
+		this.items = Array.from(this.wrapper.children);
 
 		this.transitionDuration = parseFloat(getComputedStyle(this.wrapper).transitionDuration) * 1000;
 		this.visibleCount = this.wrapper.clientWidth / this.items[0].clientWidth;
@@ -102,7 +108,7 @@ class Slider {
 
 	getItemPosition(position) {
 		const diff = this.getIndex(position) - this.getIndex(this.position);
-		const back = (diff < 0 ? 0 : this.items.length) - diff;
+		const back = (diff > 0 ? this.items.length : 0) - diff;
 		const forward = (diff < 0 ? this.items.length : 0) + diff;
 
 		return this.position + (back < forward ? -back : forward);
@@ -121,7 +127,7 @@ class Slider {
 	}
 
 	setPosition(position) {
-		for (var i = position - this.nearCount; i <= position + this.nearCount; i++) {
+		for (let i = position - this.nearCount; i <= position + this.nearCount; i++) {
 			this.updateItemPosition(i);
 		}
 
@@ -150,12 +156,12 @@ class Slider {
 	}
 }
 
-var previewSlider = new Slider({
+const previewSlider = new Slider({
 	el: document.querySelector('#slider1'),
 	slideChange: position => thumbsSlider.slideTo(position),
 });
 
-var thumbsSlider = new Slider({
+const thumbsSlider = new Slider({
 	el: document.querySelector('#slider2'),
 	slideChange: position => previewSlider.slideTo(position),
 });
