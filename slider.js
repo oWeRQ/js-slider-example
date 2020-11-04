@@ -15,6 +15,39 @@ function queryElement(el, context) {
 	return null;
 }
 
+function eventListeners(fn) {
+	const listeners = [];
+
+	fn((el, type, handler, options) => {
+		el.addEventListener(type, handler, options)
+		listeners.push({el, type, handler});
+	});
+
+	return () => listeners.forEach(listener => listener.el.removeEventListener(listener.type, listener.handler));
+}
+
+function prevent(fn) {
+	return (e, ...args) => {
+		e.preventDefault();
+		fn.call(this, e, ...args);
+	};
+}
+
+function touchSlideX(el, threshold, fn) {
+	return eventListeners(on => {
+		let touchStart;
+		on(el, 'touchstart', e => {
+			touchStart = e.changedTouches[0].clientX;
+		});
+		on(el, 'touchend', e => {
+			const delta = e.changedTouches[0].clientX - touchStart;
+			if (Math.abs(delta) > threshold) {
+				fn(e, delta);
+			}
+		});
+	})
+}
+
 class Slider {
 	constructor(options) {
 		this.el = queryElement(options.el);
@@ -30,68 +63,30 @@ class Slider {
 	}
 
 	init() {
-		this.initItems();
-		this.initClick();
-		this.initTouch();
+		this.items = Array.from(this.wrapper.children);
+
+		this.transitionDuration = parseFloat(getComputedStyle(this.wrapper).transitionDuration) * 1000;
+		this.visibleCount = this.wrapper.clientWidth / this.items[0].clientWidth;
+		this.nearCount = Math.floor(this.visibleCount / 2);
+
+		this.destroyClick = eventListeners(on => {
+			on(this.prev, 'click', prevent(() => this.slideToEmit(this.position - 1)));
+			on(this.next, 'click', prevent(() => this.slideToEmit(this.position + 1)));
+			this.items.forEach((el, index) => {
+				on(el, 'click', prevent(() => this.slideToEmit(index)));
+			});
+		});
+
+		this.destroyTouch = touchSlideX(this.el, this.touchThreshold, (e, delta) => {
+			this.slideToEmit(this.position - Math.sign(delta));
+		});
+
 		this.resetOffset();
 	}
 
 	destroy() {
 		this.destroyClick();
 		this.destroyTouch();
-	}
-
-	initItems() {
-		this.items = Array.from(this.wrapper.children);
-
-		this.transitionDuration = parseFloat(getComputedStyle(this.wrapper).transitionDuration) * 1000;
-		this.visibleCount = this.wrapper.clientWidth / this.items[0].clientWidth;
-		this.nearCount = Math.floor(this.visibleCount / 2);
-	}
-
-	initClick() {
-		this.prev.addEventListener('click', this.prevListener = e => {
-			e.preventDefault();
-			this.slideToEmit(this.position - 1);
-		});
-		this.next.addEventListener('click', this.nextListener = e => {
-			e.preventDefault();
-			this.slideToEmit(this.position + 1);
-		});
-		this.itemsListeners = this.items.map((el, index) => {
-			const listener = e => {
-				e.preventDefault();
-				this.slideToEmit(index);
-			};
-			el.addEventListener('click', listener);
-			return listener;
-		});
-	}
-
-	destroyClick() {
-		this.prev.removeEventListener('click', this.prevListener);
-		this.next.removeEventListener('click', this.nextListener);
-		this.itemsListeners.forEach((listener, i) => {
-			this.items[i].removeEventListener('click', listener);
-		});
-	}
-
-	initTouch() {
-		let touchStartX;
-		this.el.addEventListener('touchstart', this.touchstartListener = e => {
-			touchStartX = e.changedTouches[0].clientX;
-		});
-		this.el.addEventListener('touchend', this.touchendListener = e => {
-			const deltaX = e.changedTouches[0].clientX - touchStartX;
-			if (Math.abs(deltaX) > this.touchThreshold) {
-				this.slideToEmit(this.position - Math.sign(deltaX));
-			}
-		});
-	}
-
-	destroyTouch() {
-		this.el.removeEventListener('touchstart', this.touchstartListener);
-		this.el.removeEventListener('touchend', this.touchendListener);
 	}
 
 	getOffset(position) {
