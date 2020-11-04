@@ -1,6 +1,6 @@
-function withoutTransition(el, cb) {
+function withoutTransition(el, fn) {
 	el.style.transitionDuration = '0s';
-	cb();
+	fn();
 	void(el.clientWidth); // force reflow
 	el.style.transitionDuration = '';
 }
@@ -48,6 +48,33 @@ function touchSlideX(el, threshold, fn) {
 	})
 }
 
+function transitionDuration(el) {
+	return parseFloat(getComputedStyle(el).transitionDuration) * 1000;
+}
+
+function getOffset(total, position) {
+	return Math.floor(position / total) * total;
+}
+
+function getIndex(total, position) {
+	return position - getOffset(total, position);
+}
+
+function getDirection(total, prev, next) {
+	const diff = getIndex(total, next) - getIndex(total, prev);
+	const back = (diff > 0 ? total : 0) - diff;
+	const forward = (diff < 0 ? total : 0) + diff;
+	return (back < forward ? -back : forward);
+}
+
+function singleTimeout(fn, delay) {
+	let timeout;
+	return () => {
+		timeout && clearTimeout(timeout);
+		timeout = setTimeout(fn, delay);
+	};
+}
+
 class Slider {
 	constructor(options) {
 		this.el = queryElement(options.el);
@@ -65,7 +92,6 @@ class Slider {
 	init() {
 		this.items = Array.from(this.wrapper.children);
 
-		this.transitionDuration = parseFloat(getComputedStyle(this.wrapper).transitionDuration) * 1000;
 		this.visibleCount = this.wrapper.clientWidth / this.items[0].clientWidth;
 		this.nearCount = Math.floor(this.visibleCount / 2);
 
@@ -81,6 +107,7 @@ class Slider {
 			this.slideToEmit(this.position - Math.sign(delta));
 		});
 
+		this.sheduleResetOffset = singleTimeout(() => this.resetOffset(), transitionDuration(this.wrapper));
 		this.resetOffset();
 	}
 
@@ -89,24 +116,12 @@ class Slider {
 		this.destroyTouch();
 	}
 
-	getOffset(position) {
-		return Math.floor(position / this.items.length) * this.items.length;
-	}
-
-	getIndex(position) {
-		return position - this.getOffset(position);
-	}
-
 	getItem(position) {
-		return this.items[this.getIndex(position)];
+		return this.items[getIndex(this.items.length, position)];
 	}
 
 	getItemPosition(position) {
-		const diff = this.getIndex(position) - this.getIndex(this.position);
-		const back = (diff > 0 ? this.items.length : 0) - diff;
-		const forward = (diff < 0 ? this.items.length : 0) + diff;
-
-		return this.position + (back < forward ? -back : forward);
+		return this.position + getDirection(this.items.length, this.position, position);
 	}
 
 	updateWrapperPosition(position) {
@@ -114,7 +129,7 @@ class Slider {
 	}
 
 	updateItemPosition(position) {
-		this.getItem(position).style.transform = 'translateX(' + (this.getOffset(position) * 100) + '%)';
+		this.getItem(position).style.transform = 'translateX(' + (getOffset(this.items.length, position) * 100) + '%)';
 	}
 
 	updateActive(position, state) {
@@ -135,14 +150,12 @@ class Slider {
 	}
 
 	resetOffset() {
-		withoutTransition(this.wrapper, () => this.setPosition(this.getIndex(this.position)));
+		withoutTransition(this.wrapper, () => this.setPosition(getIndex(this.items.length, this.position)));
 	}
 
 	slideTo(position) {
 		this.setPosition(this.getItemPosition(position));
-
-		clearTimeout(this.resetOffsetTimeout);
-		this.resetOffsetTimeout = setTimeout(() => this.resetOffset(), this.transitionDuration);
+		this.sheduleResetOffset();
 	}
 
 	slideToEmit(position) {
