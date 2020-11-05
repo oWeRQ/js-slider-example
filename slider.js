@@ -27,9 +27,9 @@ function eventListeners(fn) {
 }
 
 function prevent(fn) {
-	return (e, ...args) => {
+	return e => {
 		e.preventDefault();
-		fn.call(this, e, ...args);
+		return fn.call(this, e);
 	};
 }
 
@@ -75,6 +75,17 @@ function singleTimeout(fn, delay) {
 	};
 }
 
+function activeClass(className) {
+	let active;
+	return (el) => {
+		if (el !== active) {
+			active && active.classList.remove(className);
+			el && el.classList.add(className);
+			active = el;
+		}
+	};
+}
+
 class Slider {
 	constructor(options) {
 		this.el = queryElement(options.el);
@@ -107,6 +118,8 @@ class Slider {
 			this.slideToEmit(this.position - Math.sign(delta));
 		});
 
+		this.setActiveItem = activeClass(this.activeClass);
+
 		this.sheduleResetOffset = singleTimeout(() => this.resetOffset(), transitionDuration(this.wrapper));
 		this.resetOffset();
 	}
@@ -132,10 +145,6 @@ class Slider {
 		this.getItem(position).style.transform = 'translateX(' + (getOffset(this.items.length, position) * 100) + '%)';
 	}
 
-	updateActive(position, state) {
-		this.getItem(position).classList.toggle(this.activeClass, state);
-	}
-
 	setPosition(position) {
 		for (let i = position - this.nearCount; i <= position + this.nearCount; i++) {
 			this.updateItemPosition(i);
@@ -143,8 +152,7 @@ class Slider {
 
 		this.updateWrapperPosition(position - this.nearCount);
 
-		this.updateActive(this.position, false);
-		this.updateActive(position, true);
+		this.setActiveItem(this.getItem(position));
 
 		this.position = position;
 	}
@@ -175,3 +183,24 @@ const thumbsSlider = new Slider({
 });
 thumbsSlider.destroy();
 thumbsSlider.init();
+
+console.assert(getIndex(6, -12) === 0);
+console.assert(getIndex(6, -1) === 5);
+console.assert(getIndex(6, 7) === 1);
+console.assert(getIndex(6, 12) === 0);
+
+console.assert(getDirection(5, 0, 2) === 2);
+console.assert(getDirection(5, 0, 3) === -2);
+console.assert(getDirection(5, 0, 5) === 0);
+
+console.assert(getDirection(5, 3, 1) === -2);
+console.assert(getDirection(5, 3, 3) === 0);
+console.assert(getDirection(5, 3, 5) === 2);
+
+console.assert(getDirection(6, 0, 3) === 3);
+console.assert(getDirection(6, 0, 4) === -2);
+console.assert(getDirection(6, 0, 6) === 0);
+
+console.assert(getDirection(6, 3, 0) === 3);
+console.assert(getDirection(6, 3, 1) === -2);
+console.assert(getDirection(6, 3, 3) === 0);
