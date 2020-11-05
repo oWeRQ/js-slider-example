@@ -103,6 +103,10 @@ class Slider {
 	init() {
 		this.items = Array.from(this.wrapper.children);
 
+		this.widths = this.items.map(item => item.clientWidth);
+		this.offsets = this.items.map(item => item.offsetLeft);
+		this.totalWidth = this.offsets[this.offsets.length - 1] + this.widths[this.widths.length - 1];
+
 		this.visibleCount = this.wrapper.clientWidth / this.items[0].clientWidth;
 		this.nearCount = Math.floor(this.visibleCount / 2);
 
@@ -129,7 +133,7 @@ class Slider {
 		this.destroyTouch();
 	}
 
-	getItem(position) {
+	getItemElement(position) {
 		return this.items[getIndex(this.items.length, position)];
 	}
 
@@ -137,22 +141,51 @@ class Slider {
 		return this.position + getDirection(this.items.length, this.position, position);
 	}
 
+	getRepeatOffset(position) {
+		return Math.floor(position / this.items.length) * this.totalWidth;
+	}
+
+	getItemOffset(position) {
+		return this.getRepeatOffset(position) + this.offsets[getIndex(this.items.length, position)];
+	}
+
+	getItemWidth(position) {
+		return this.widths[getIndex(this.items.length, position)];
+	}
+
+	getCenterOffset(position) {
+		return this.wrapper.clientWidth / 2 - this.getItemWidth(position) / 2;
+	}
+
 	updateWrapperPosition(position) {
-		this.wrapper.style.transform = 'translateX(' + (-position / this.visibleCount * 100) + '%)';
+		const translateX = -this.getItemOffset(position) + this.getCenterOffset(position) + 'px';
+		this.wrapper.style.transform = 'translateX(' + translateX + ')';
 	}
 
 	updateItemPosition(position) {
-		this.getItem(position).style.transform = 'translateX(' + (getOffset(this.items.length, position) * 100) + '%)';
+		const translateX = this.getRepeatOffset(position) + 'px';
+		this.getItemElement(position).style.transform = 'translateX(' + translateX + ')';
 	}
 
 	setPosition(position) {
-		for (let i = position - this.nearCount; i <= position + this.nearCount; i++) {
-			this.updateItemPosition(i);
+		this.updateItemPosition(position);
+
+		const fillWidth = this.getCenterOffset(position);
+		if (fillWidth) {
+			for (let i = position - 1, width = 0; width < fillWidth; i--) {
+				width += this.getItemWidth(i);
+				this.updateItemPosition(i);
+			}
+
+			for (let i = position + 1, width = 0; width < fillWidth; i++) {
+				width += this.getItemWidth(i);
+				this.updateItemPosition(i);
+			}
 		}
 
-		this.updateWrapperPosition(position - this.nearCount);
+		this.updateWrapperPosition(position);
 
-		this.setActiveItem(this.getItem(position));
+		this.setActiveItem(this.getItemElement(position));
 
 		this.position = position;
 	}
