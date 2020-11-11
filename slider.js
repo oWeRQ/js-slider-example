@@ -68,6 +68,20 @@ function getLast(arr) {
 	return arr[arr.length - 1];
 }
 
+function getFillCount(fill, val) {
+	let i;
+	for (i = 1; val(i) < fill; i++);
+	return i;
+}
+
+function getRange(start, end) {
+	const range = [];
+	for (let i = start; i <= end; i++) {
+		range.push(i);
+	}
+	return range;
+}
+
 function getDirection(total, prev, next) {
 	const diff = getIndex(total, next) - getIndex(total, prev);
 	const back = (diff > 0 ? total : 0) - diff;
@@ -109,17 +123,20 @@ class Slider {
 	}
 
 	init() {
-		this.items = Array.from(this.wrapper.children);
-
-		this.widths = this.items.map(item => item.clientWidth);
-		this.offsets = this.items.map(item => item.offsetLeft);
-		this.totalWidth = getLast(this.offsets) + getLast(this.widths);
+		this.items = Array.from(this.wrapper.children).map(el => ({
+			el,
+			size: el.clientWidth,
+			start: el.offsetLeft,
+			end: el.offsetLeft + el.clientWidth,
+		}));
+		this.totalSize = getLast(this.items).end;
+		this.wrapperSize = this.wrapper.clientWidth;
 
 		this.destroyClick = eventListeners(on => {
 			on(this.prev, 'click', prevent(() => this.slideToEmit(this.position - 1)));
 			on(this.next, 'click', prevent(() => this.slideToEmit(this.position + 1)));
-			this.items.forEach((el, index) => {
-				on(el, 'click', prevent(() => this.slideToEmit(index)));
+			this.items.forEach((item, index) => {
+				on(item.el, 'click', prevent(() => this.slideToEmit(index)));
 			});
 		});
 
@@ -138,7 +155,7 @@ class Slider {
 		this.destroyTouch();
 	}
 
-	getItemElement(position) {
+	getItem(position) {
 		return getRepeat(this.items, position);
 	}
 
@@ -147,59 +164,52 @@ class Slider {
 	}
 
 	getRepeatOffset(position) {
-		return Math.floor(position / this.items.length) * this.totalWidth;
+		return Math.floor(position / this.items.length) * this.totalSize;
 	}
 
-	getItemOffset(position) {
-		return this.getRepeatOffset(position) + getRepeat(this.offsets, position);
+	getItemStart(position) {
+		return this.getRepeatOffset(position) + this.getItem(position).start;
 	}
 
-	getItemWidth(position) {
-		return getRepeat(this.widths, position);
+	getItemEnd(position) {
+		return this.getRepeatOffset(position) + this.getItem(position).end;
 	}
 
 	getCenterOffset(position) {
-		return this.wrapper.clientWidth / 2 - this.getItemWidth(position) / 2;
+		return this.wrapperSize / 2 - this.getItem(position).size / 2;
 	}
 
 	updateWrapperPosition(position) {
-		const translateX = -this.getItemOffset(position) + this.getCenterOffset(position) + 'px';
+		const translateX = -this.getItemStart(position) + this.getCenterOffset(position) + 'px';
 		this.wrapper.style.transform = 'translateX(' + translateX + ')';
 	}
 
 	updateItemPosition(position) {
 		const translateX = this.getRepeatOffset(position) + 'px';
-		this.getItemElement(position).style.transform = 'translateX(' + translateX + ')';
+		this.getItem(position).el.style.transform = 'translateX(' + translateX + ')';
 	}
 
-	getRenderRange(position) {
-		const range = [];
+	getVisiblePrev(position) {
+		const fill = this.getCenterOffset(position);
+		const start = this.getItemStart(position);
+		return getFillCount(fill, i => start - this.getItemStart(position - i));
+	}
 
-		const fillWidth = this.getCenterOffset(position);
-		if (fillWidth) {
-			for (let i = position - 1, width = 0; width < fillWidth; i--) {
-				width += this.getItemWidth(i);
-				range.push(i);
-			}
-		}
+	getVisibleNext(position) {
+		const fill = this.getCenterOffset(position);
+		const end = this.getItemEnd(position);
+		return getFillCount(fill, i => this.getItemEnd(position + i) - end);
+	}
 
-		range.push(position);
-
-		if (fillWidth) {
-			for (let i = position + 1, width = 0; width < fillWidth; i++) {
-				width += this.getItemWidth(i);
-				range.push(i);
-			}
-		}
-
-		return range;
+	getVisibleRange(position) {
+		return getRange(position - this.getVisiblePrev(position), position + this.getVisibleNext(position));
 	}
 
 	setPosition(position) {
-		this.getRenderRange(position).forEach(i => this.updateItemPosition(i));
+		this.getVisibleRange(position).forEach(i => this.updateItemPosition(i));
 		this.updateWrapperPosition(position);
 
-		this.setActiveItem(this.getItemElement(position));
+		this.setActiveItem(this.getItem(position).el);
 
 		this.position = position;
 	}
