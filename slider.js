@@ -159,14 +159,6 @@ class Slider {
 		return getRepeat(this.items, position);
 	}
 
-	getItemPosition(position) {
-		return this.position + getDirection(this.items.length, this.position, position);
-	}
-
-	getRepeatOffset(position) {
-		return Math.floor(position / this.items.length) * this.totalSize;
-	}
-
 	getItemStart(position) {
 		return this.getRepeatOffset(position) + this.getItem(position).start;
 	}
@@ -175,18 +167,16 @@ class Slider {
 		return this.getRepeatOffset(position) + this.getItem(position).end;
 	}
 
+	getItemPosition(position) {
+		return this.position + getDirection(this.items.length, this.position, position);
+	}
+
 	getCenterOffset(position) {
 		return this.wrapperSize / 2 - this.getItem(position).size / 2;
 	}
 
-	updateWrapperPosition(position) {
-		const translateX = -this.getItemStart(position) + this.getCenterOffset(position) + 'px';
-		this.wrapper.style.transform = 'translateX(' + translateX + ')';
-	}
-
-	updateItemPosition(position) {
-		const translateX = this.getRepeatOffset(position) + 'px';
-		this.getItem(position).el.style.transform = 'translateX(' + translateX + ')';
+	getRepeatOffset(position) {
+		return Math.floor(position / this.items.length) * this.totalSize;
 	}
 
 	getVisiblePrev(position) {
@@ -203,6 +193,16 @@ class Slider {
 
 	getVisibleRange(position) {
 		return getRange(position - this.getVisiblePrev(position), position + this.getVisibleNext(position));
+	}
+
+	updateWrapperPosition(position) {
+		const translateX = -this.getItemStart(position) + this.getCenterOffset(position) + 'px';
+		this.wrapper.style.transform = 'translateX(' + translateX + ')';
+	}
+
+	updateItemPosition(position) {
+		const translateX = this.getRepeatOffset(position) + 'px';
+		this.getItem(position).el.style.transform = 'translateX(' + translateX + ')';
 	}
 
 	setPosition(position) {
