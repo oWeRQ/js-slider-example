@@ -68,9 +68,9 @@ function getLast(arr) {
 	return arr[arr.length - 1];
 }
 
-function getFillCount(fill, val) {
+function getFillCount(total, fill, val) {
 	let i;
-	for (i = 1; val(i) < fill; i++);
+	for (i = 1; i <= total && val(i) < fill; i++);
 	return i;
 }
 
@@ -146,7 +146,7 @@ class Slider {
 
 		this.setActiveItem = activeClass(this.activeClass);
 
-		this.sheduleResetOffset = singleTimeout(() => this.resetOffset(), transitionDuration(this.wrapper));
+		this.scheduleResetOffset = singleTimeout(() => this.resetOffset(), transitionDuration(this.wrapper));
 		this.resetOffset();
 	}
 
@@ -182,13 +182,13 @@ class Slider {
 	getVisiblePrev(position) {
 		const fill = this.getCenterOffset(position);
 		const start = this.getItemStart(position);
-		return getFillCount(fill, i => start - this.getItemStart(position - i));
+		return getFillCount(this.items.length, fill, i => start - this.getItemStart(position - i));
 	}
 
 	getVisibleNext(position) {
 		const fill = this.getCenterOffset(position);
 		const end = this.getItemEnd(position);
-		return getFillCount(fill, i => this.getItemEnd(position + i) - end);
+		return getFillCount(this.items.length, fill, i => this.getItemEnd(position + i) - end);
 	}
 
 	getVisibleRange(position) {
@@ -220,7 +220,7 @@ class Slider {
 
 	slideTo(position) {
 		this.setPosition(this.getItemPosition(position));
-		this.sheduleResetOffset();
+		this.scheduleResetOffset();
 	}
 
 	slideToEmit(position) {
